@@ -1,0 +1,77 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
+
+# --- 1. Simulation of Internship Data ---
+# Creating a dataset that represents typical findings during a manufacturing inspection
+np.random.seed(42)  # For reproducible results
+
+data = {
+    'Batch_ID': [f'B-{i:03d}' for i in range(1, 101)],
+    'Total_Produced': np.random.randint(480, 520, 100),
+    'Dimensional_Defects': np.random.randint(5, 15, 100),
+    'Surface_Finish_Defects': np.random.randint(3, 10, 100),
+    'Burrs': np.random.randint(1, 6, 100),
+    'Cracks': np.random.randint(0, 3, 100),
+    'Geometric_Errors': np.random.randint(0, 2, 100)
+}
+
+df = pd.DataFrame(data)
+
+# Calculate Total Defects per batch
+df['Total_Defects'] = (df['Dimensional_Defects'] + df['Surface_Finish_Defects'] +
+                       df['Burrs'] + df['Cracks'] + df['Geometric_Errors'])
+
+# Calculate Defect Rate (%)
+df['Defect_Rate'] = (df['Total_Defects'] / df['Total_Produced']) * 100
+
+print("--- Data Summary ---")
+print(df.head())
+print(f"\nAverage Defect Rate: {df['Defect_Rate'].mean():.2f}%")
+
+# --- 2. Pareto Analysis (The 80/20 Rule) ---
+# Summing up defects by type to see what caused the most rejections
+defect_counts = {
+    'Dimensional Deviation': df['Dimensional_Defects'].sum(),
+    'Surface Finish': df['Surface_Finish_Defects'].sum(),
+    'Burrs/Sharp Edges': df['Burrs'].sum(),
+    'Material Cracks': df['Cracks'].sum(),
+    'Geometric Errors': df['Geometric_Errors'].sum()
+}
+
+pareto_df = pd.DataFrame(list(defect_counts.items()),
+                         columns=['Defect Type', 'Count'])
+pareto_df = pareto_df.sort_values(by='Count', ascending=False)
+pareto_df['Cumulative Percentage'] = pareto_df['Count'].cumsum() / \
+    pareto_df['Count'].sum() * 100
+
+# --- 3. Visualization ---
+fig, ax1 = plt.subplots(figsize=(10, 6))
+
+# Bar Plot (Counts)
+sns.barplot(x='Defect Type', y='Count',
+            data=pareto_df, ax=ax1, color='steelblue')
+ax1.set_ylabel('Total Defect Count', color='steelblue')
+ax1.tick_params(axis='y', labelcolor='steelblue')
+ax1.set_title(
+    'Pareto Analysis of Manufacturing Defects (Dynamique Industries Internship)', fontsize=14)
+
+# Line Plot (Cumulative Percentage)
+ax2 = ax1.twinx()
+sns.lineplot(x='Defect Type', y='Cumulative Percentage',
+             data=pareto_df, ax=ax2, color='red', marker='o', sort=False)
+ax2.set_ylabel('Cumulative Percentage (%)', color='red')
+ax2.tick_params(axis='y', labelcolor='red')
+ax2.set_ylim(0, 110)
+
+# Adding the 80% cutoff line
+plt.axhline(80, color='grey', linestyle='--')
+plt.text(3, 82, '80% Cutoff', color='grey')
+
+plt.tight_layout()
+plt.show()
+
+print("\n--- Key Finding ---")
+print("As shown in the chart, the top 2 defect types (Dimensional & Surface) contribute to roughly 70-80% of issues.")
+print("Recommendation: Focus maintenance efforts on Lathe Calibration and Tool Insert quality.")
